@@ -91,7 +91,7 @@ def get_pie(selected_site):
 
 def get_scatter_chart(selected_site, payload_value):
     low, high = payload_value
-    if selected_site == 'All':
+    if selected_site == 'ALL':
         df = spacex_df
         
     else:
