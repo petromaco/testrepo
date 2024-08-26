@@ -1,0 +1,83 @@
+#Analysis of Data in R 
+# The csv files are from Divvy from June 2023 to MAy 2024.  12 months.
+
+library(tidyverse)
+
+# Divvy datasets procesed in excel
+# using sheet parameter because there is more than one in the excel file
+# https://www.rdocumentation.org/packages/readxl/versions/1.4.3/topics/read_excel
+# read_excel(path,sheet = NULL,trim_ws = TRUE) not all parameters used
+
+xl_202306 <- readxl::read_excel('202306-divvy-tripdata.xlsx', sheet = '202306-divvy-tripdata', trim_ws = TRUE )
+xl_202307 <- readxl::read_excel('202307-divvy-tripdata.xlsx', sheet = '202307-divvy-tripdata', trim_ws = TRUE )
+xl_202308 <- readxl::read_excel('202308-divvy-tripdata.xlsx', sheet = '202308-divvy-tripdata', trim_ws = TRUE )
+xl_202309 <- readxl::read_excel('202309-divvy-tripdata.xlsx', sheet = '202309-divvy-tripdata', trim_ws = TRUE )
+xl_202310 <- readxl::read_excel('202310-divvy-tripdata.xlsx', sheet = '202310-divvy-tripdata', trim_ws = TRUE )
+xl_202311 <- readxl::read_excel('202311-divvy-tripdata.xlsx', sheet = '202311-divvy-tripdata', trim_ws = TRUE )
+xl_202312 <- readxl::read_excel('202312-divvy-tripdata.xlsx', sheet = '202312-divvy-tripdata', trim_ws = TRUE )
+xl_202401 <- readxl::read_excel('202401-divvy-tripdata.xlsx', sheet = '202401-divvy-tripdata', trim_ws = TRUE )
+xl_202402 <- readxl::read_excel('202402-divvy-tripdata.xlsx', sheet = '202402-divvy-tripdata', trim_ws = TRUE )
+xl_202403 <- readxl::read_excel('202403-divvy-tripdata.xlsx', sheet = '202403-divvy-tripdata', trim_ws = TRUE )
+xl_202404 <- readxl::read_excel('202404-divvy-tripdata.xlsx', sheet = '202404-divvy-tripdata', trim_ws = TRUE )
+xl_202405 <- readxl::read_excel('202405-divvy-tripdata.xlsx', sheet = '202405-divvy-tripdata', trim_ws = TRUE )
+
+
+# combine all dataframes into one
+# https://dplyr.tidyverse.org/reference/bind_rows.html
+divvy_data <- bind_rows(xl_202306, xl_202307, xl_202308, xl_202309, xl_202310, xl_202311,
+                        xl_202312, xl_202401, xl_202402, xl_202403, xl_202404, xl_202405)
+
+# removing station name and id columns
+divvy_data <- divvy_data %>%  
+  select(-c(start_station_name, start_station_id, end_station_name, end_station_id, ))
+
+# setting a new column date as Date
+divvy_data$date <- as.Date(divvy_data$started_at)
+
+# Getting the day of the week from date column
+divvy_data$day_of_week <- format(as.Date(divvy_data$date), "%A")
+
+
+#https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/difftime
+# Using difftime to get a ride_length in minutes
+divvy_data$ride_length <- difftime(divvy_data$ended_at,divvy_data$started_at, units = "mins")
+
+# Converting ride_length to numeric(from 3464 secs to 3464)
+divvy_data$ride_length <- round(as.numeric(as.character(divvy_data$ride_length)), digits = 2)
+
+# getting rid of ride_length values bellow zero
+below_zero <- divvy_data %>% count(ride_length < 0)
+
+# Removing rows with values below 0 
+divvy_data <- divvy_data[!(divvy_data$ride_length<0),]
+
+
+
+# Now the data is prepared, lets do some analysis
+
+# Descriptive analysis on ride_length (all figures in minutes)
+mean(divvy_data$ride_length) 
+max(divvy_data$ride_length) 
+min(divvy_data$ride_length) 
+median(divvy_data$ride_length)
+
+
+# Compare members and casual users
+#https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/aggregate
+aggregate(divvy_data$ride_length ~ divvy_data$member_casual, FUN = mean)
+aggregate(divvy_data$ride_length ~ divvy_data$member_casual, FUN = max)
+aggregate(divvy_data$ride_length ~ divvy_data$member_casual, FUN = min)
+aggregate(divvy_data$ride_length ~ divvy_data$member_casual, FUN = sum)
+
+# See the average ride time by each day for members vs casual users
+aggregate(divvy_data$ride_length ~ divvy_data$member_casual + divvy_data$day_of_week, FUN = mean)
+
+ggplot(divvy_data, aes(x = day_of_week, y = ride_length, fill = member_casual)) +
+  geom_col(position = "dodge")
+
+ggplot(divvy_data) + geom_col(mapping = aes(x = day_of_week, y = ride_length))
+
+ggplot(divvy_data) + geom_col(mapping = aes(x = day_of_week, y = ride_length, fill = member_casual)) + facet_grid(~member_casual)
+
+
+write.csv(divvy_data, file = "C:/Users/Pedro/Desktop/divvy_data_mod.csv")
